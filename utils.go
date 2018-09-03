@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strings"
 
 	"github.com/alecthomas/chroma/styles"
 
@@ -17,6 +18,9 @@ import (
 )
 
 func validateName(name string) string {
+	if strings.TrimSpace(name) == "" {
+		return defaultName
+	}
 	return name
 }
 
