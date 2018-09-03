@@ -1,0 +1,19 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/index.js"></script>
+    </head>
+    <body>
+        <form action="/" method="POST">
+            <input type="text" name="name">
+            <select name="lang">
+                <option value="">Auto</option>
+                {{range .Langs}}
+                    <option value="{{.}}">{{.}}</option>
+                {{end}}
+            </select>
+            <button>Submit</button>
+            <textarea name="code" id="code" cols="30" rows="10"></textarea>
+        </form>
+    </body>
+</html>
