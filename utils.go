@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/alecthomas/chroma/styles"
 
@@ -29,6 +28,7 @@ type config struct {
 	UndefinedLang  string
 	Header         string
 	AssetsDir      string
+	ExpireAfter    time.Duration
 }
 
 func validateName(name string) string {
@@ -40,32 +40,6 @@ func validateName(name string) string {
 
 func validateCode(code string) string {
 	return code
-}
-
-var currentPathNum = 0
-
-const alphabeth = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-var paths = map[string]struct{}{}
-
-func createPastePathAndID() (string, int) {
-	defer func() { currentPathNum++ }()
-	var sPath string
-	for {
-		path := make([]rune, cfg.PathLen)
-		for i := range path {
-			path[i] = rune(alphabeth[rand.Intn(len(alphabeth))])
-		}
-		sPath = string(path)
-		_, ok := paths[sPath]
-		if !ok {
-			paths[sPath] = struct{}{}
-			break
-		}
-		log.Println("Found collision:", sPath)
-	}
-
-	return sPath, currentPathNum
 }
 
 //hightlightCode formattes the code string passed and returns the css, code highlight in HTML and the language
@@ -129,15 +103,12 @@ func handlerToRoute(h http.Handler) Route {
 }
 
 func handlePackrFile(filename string) Route {
-	log.Println("Checking:", filename)
 	return func(s Server, w http.ResponseWriter, req *http.Request) {
 		var file http.File
 		var err error
 		if _, err := os.Stat(cfg.AssetsDir + filename); err == nil {
-			log.Println("Found local")
 			file, err = os.Open(cfg.AssetsDir + filename)
 		} else {
-			log.Println("Packr")
 			file, err = assets.Open(filename)
 		}
 

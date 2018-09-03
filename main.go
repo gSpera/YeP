@@ -22,6 +22,7 @@ var cfg = config{
 	UndefinedLang:  "Undefined",
 	Header:         "Yep Another Pastebin",
 	AssetsDir:      "assets/",
+	ExpireAfter:    30 * time.Minute,
 }
 
 const (
@@ -40,12 +41,12 @@ func main() {
 	log.SetFlags(log.Flags() | log.Lshortfile)
 	assets = packr.NewBox(compileAssets)
 
-	srv := Server{
-		db: &MemoryDB{},
-		routes: map[string]Route{
+	srv := NewServer(
+		&MemoryDB{},
+		map[string]Route{
 			"/": home,
 		},
-	}
+	)
 
 	for _, filename := range assets.List() {
 		//Do not return templates
@@ -64,6 +65,15 @@ func main() {
 type Server struct {
 	db     Database
 	routes map[string]Route
+}
+
+//NewServer creates a new server
+func NewServer(db Database, routes map[string]Route) Server {
+	s := Server{
+		db:     db,
+		routes: routes,
+	}
+	return s
 }
 
 //Route is a Server Route
@@ -120,9 +130,9 @@ func postPaste(s Server, w http.ResponseWriter, req *http.Request) {
 	code = validateCode(code)
 	css, code, lang := highlightCode(code, lang)
 
-	path, id := createPastePathAndID()
+	path := s.db.CreatePastePath(cfg.PathLen)
 	paste := Paste{
-		ID:      id,
+		Path:    path,
 		User:    name,
 		Lang:    lang,
 		Style:   template.CSS(css),
@@ -139,8 +149,14 @@ func postPaste(s Server, w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	req.Method = "GET"
-	http.Redirect(w, req, path, http.StatusTemporaryRedirect)
+	//If ExpireTime is 0 do not delete pastes
+	if cfg.ExpireAfter != 0 {
+		time.AfterFunc(cfg.ExpireAfter, func() {
+			s.db.Delete(paste.Path)
+		})
+	}
+
+	http.Redirect(w, req, path, http.StatusFound)
 }
 
 func getPaste(s Server, w http.ResponseWriter, req *http.Request) {

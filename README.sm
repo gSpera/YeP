@@ -20,14 +20,15 @@ Config
 Well, you can add a yep.json file near the executable
 Those are the options with the defaults value:
 
-Addr:           ":8080" Address to bind
-TimeFormat:     "2 Jan 2006 15:04:05" Time to display, in the "Golang format"@""
-DefaultName:    "Anonymous" Name to display if empty name is used
-PathLen:        5 Lenght of the paste path
-HighlightStyle: "dracula" Hightlight Style to use, from Chroma styles
-UndefinedLang:  "Undefined" Lang to display whenever YEP is not capable to auto-detect
-Header:         "Yep Another Pastebin" String to display somewhere
-AssetsDir:      "assets/" Where you can insert you assests
+- Addr:           ":8080" Address to bind
+- TimeFormat:     "2 Jan 2006 15:04:05" Time to display, in the "Golang format"@""
+- DefaultName:    "Anonymous" Name to display if empty name is used
+- PathLen:        5 Lenght of the paste path
+- HighlightStyle: "dracula" Hightlight Style to use, from Chroma styles
+- UndefinedLang:  "Undefined" Lang to display whenever YEP is not capable to auto-detect
+- Header:         "Yep Another Pastebin" String to display somewhere
+- AssetsDir:      "assets/" Where you can insert you assests
+- ExpireAfter:    30 Minute Time after that pastes will be destroyed, time in nanosecond(we want only the best precision for you), Set to 0 for Disable
 
 Customize
 =========
