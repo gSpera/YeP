@@ -20,6 +20,7 @@ const (
 	highlightStyle = "dracula"
 	undefinedLang  = "Undefined"
 	header         = "Yep Another Pastebin"
+	assetsDir      = "assets/"
 )
 
 var assets packr.Box
@@ -27,7 +28,7 @@ var assets packr.Box
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	log.SetFlags(log.Flags() | log.Lshortfile)
-	assets = packr.NewBox("./assets/")
+	assets = packr.NewBox(assetsDir)
 
 	srv := Server{
 		db: &MemoryDB{},

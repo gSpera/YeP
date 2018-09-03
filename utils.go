@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/alecthomas/chroma/styles"
@@ -116,13 +117,21 @@ func handlerToRoute(h http.Handler) Route {
 
 func handlePackrFile(filename string) Route {
 	return func(s Server, w http.ResponseWriter, req *http.Request) {
-		fl, err := assets.Open(filename)
+		var file http.File
+		var err error
+		if _, err := os.Stat(assetsDir + filename); err == nil {
+			file, err = os.Open(assetsDir + filename)
+		} else {
+			file, err = assets.Open(filename)
+		}
+
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w, "Cannot find file: %s", filename)
 			return
 		}
-		_, err = io.Copy(w, fl)
+
+		_, err = io.Copy(w, file)
 		if err != nil {
 			w.WriteHeader(500)
 			fmt.Fprintln(w, "Internal Server Error")
