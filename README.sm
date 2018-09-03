@@ -12,3 +12,28 @@ Install
 =======
 Download the executable, run it.
 /Done/
+
+Config
+======
+
+*You really want config??*
+Well, you can add a yep.json file near the executable
+Those are the options with the defaults value:
+
+Addr:           ":8080" Address to bind
+TimeFormat:     "2 Jan 2006 15:04:05" Time to display, in the "Golang format"@""
+DefaultName:    "Anonymous" Name to display if empty name is used
+PathLen:        5 Lenght of the paste path
+HighlightStyle: "dracula" Hightlight Style to use, from Chroma styles
+UndefinedLang:  "Undefined" Lang to display whenever YEP is not capable to auto-detect
+Header:         "Yep Another Pastebin" String to display somewhere
+AssetsDir:      "assets/" Where you can insert you assests
+
+Customize
+=========
+
+*Do you want you custom look??*
+Create a directory named /assets/(For changing, look at /Config/ section)
+and put the files inside it, you can use custom templates and styles
+- new.tmpl: For the New Paste page
+- paste.tmpl: For the Display Paste page
