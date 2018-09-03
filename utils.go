@@ -129,12 +129,15 @@ func handlerToRoute(h http.Handler) Route {
 }
 
 func handlePackrFile(filename string) Route {
+	log.Println("Checking:", filename)
 	return func(s Server, w http.ResponseWriter, req *http.Request) {
 		var file http.File
 		var err error
 		if _, err := os.Stat(cfg.AssetsDir + filename); err == nil {
+			log.Println("Found local")
 			file, err = os.Open(cfg.AssetsDir + filename)
 		} else {
+			log.Println("Packr")
 			file, err = assets.Open(filename)
 		}
 
@@ -153,7 +156,7 @@ func handlePackrFile(filename string) Route {
 	}
 }
 
-func readConfig(path string) bool {
+func readConfig(path string, cfg *config) bool {
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		return false

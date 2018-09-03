@@ -24,17 +24,21 @@ var cfg = config{
 	AssetsDir:      "assets/",
 }
 
-const configPath = "yep.json"
+const (
+	configPath    = "yep.json"
+	compileAssets = "assets/"
+)
 
 var assets packr.Box
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
-	if ok := readConfig(configPath); ok {
+	if ok := readConfig(configPath, &cfg); ok {
 		log.Println("Loaded config from:", configPath)
 	}
+
 	log.SetFlags(log.Flags() | log.Lshortfile)
-	assets = packr.NewBox(cfg.AssetsDir)
+	assets = packr.NewBox(compileAssets)
 
 	srv := Server{
 		db: &MemoryDB{},
