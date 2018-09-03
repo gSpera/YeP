@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -18,9 +20,20 @@ import (
 	"github.com/alecthomas/chroma/lexers"
 )
 
+type config struct {
+	Addr           string
+	TimeFormat     string
+	DefaultName    string
+	PathLen        int
+	HighlightStyle string
+	UndefinedLang  string
+	Header         string
+	AssetsDir      string
+}
+
 func validateName(name string) string {
 	if strings.TrimSpace(name) == "" {
-		return defaultName
+		return cfg.DefaultName
 	}
 	return name
 }
@@ -39,7 +52,7 @@ func createPastePathAndID() (string, int) {
 	defer func() { currentPathNum++ }()
 	var sPath string
 	for {
-		path := make([]rune, pathLen)
+		path := make([]rune, cfg.PathLen)
 		for i := range path {
 			path[i] = rune(alphabeth[rand.Intn(len(alphabeth))])
 		}
@@ -74,10 +87,10 @@ func highlightCode(code string, lang string) (string, string, string) {
 	lang = lex.Config().Name
 	//If cannot find lang
 	if lex == lexers.Fallback {
-		lang = undefinedLang
+		lang = cfg.UndefinedLang
 	}
 	lex = chroma.Coalesce(lex)
-	style := styles.Get(highlightStyle)
+	style := styles.Get(cfg.HighlightStyle)
 	if style == nil {
 		style = styles.Fallback
 	}
@@ -119,8 +132,8 @@ func handlePackrFile(filename string) Route {
 	return func(s Server, w http.ResponseWriter, req *http.Request) {
 		var file http.File
 		var err error
-		if _, err := os.Stat(assetsDir + filename); err == nil {
-			file, err = os.Open(assetsDir + filename)
+		if _, err := os.Stat(cfg.AssetsDir + filename); err == nil {
+			file, err = os.Open(cfg.AssetsDir + filename)
 		} else {
 			file, err = assets.Open(filename)
 		}
@@ -138,4 +151,16 @@ func handlePackrFile(filename string) Route {
 			return
 		}
 	}
+}
+
+func readConfig(path string) bool {
+	content, err := ioutil.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	err = json.Unmarshal(content, cfg)
+	if err != nil {
+		return false
+	}
+	return true
 }

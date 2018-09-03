@@ -12,23 +12,29 @@ import (
 	"github.com/gobuffalo/packr"
 )
 
-const (
-	addr           = ":8080"
-	timeFormat     = "2 Jan 2006 15:04:05"
-	defaultName    = "Anonymous"
-	pathLen        = 5
-	highlightStyle = "dracula"
-	undefinedLang  = "Undefined"
-	header         = "Yep Another Pastebin"
-	assetsDir      = "assets/"
-)
+//Config
+var cfg = config{
+	Addr:           ":8080",
+	TimeFormat:     "2 Jan 2006 15:04:05",
+	DefaultName:    "Anonymous",
+	PathLen:        5,
+	HighlightStyle: "dracula",
+	UndefinedLang:  "Undefined",
+	Header:         "Yep Another Pastebin",
+	AssetsDir:      "assets/",
+}
+
+const configPath = "yep.json"
 
 var assets packr.Box
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
+	if ok := readConfig(configPath); ok {
+		log.Println("Loaded config from:", configPath)
+	}
 	log.SetFlags(log.Flags() | log.Lshortfile)
-	assets = packr.NewBox(assetsDir)
+	assets = packr.NewBox(cfg.AssetsDir)
 
 	srv := Server{
 		db: &MemoryDB{},
@@ -45,8 +51,8 @@ func main() {
 		srv.routes["/static/"+filename] = handlePackrFile(filename)
 	}
 
-	log.Println("Listening on", addr)
-	http.ListenAndServe(addr, srv)
+	log.Println("Listening on", cfg.Addr)
+	http.ListenAndServe(cfg.Addr, srv)
 }
 
 //Server is a YeP server
@@ -92,8 +98,8 @@ func newPaste(s Server, w http.ResponseWriter, req *http.Request) {
 		Header      string
 	}{
 		getLanguages(),
-		defaultName,
-		header,
+		cfg.DefaultName,
+		cfg.Header,
 	})
 }
 
@@ -120,7 +126,7 @@ func postPaste(s Server, w http.ResponseWriter, req *http.Request) {
 		Created: time.Now(),
 	}
 	if name == "" {
-		name = defaultName
+		name = cfg.DefaultName
 	}
 	if err := s.db.Store(path, paste); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -160,7 +166,7 @@ func getPaste(s Server, w http.ResponseWriter, req *http.Request) {
 		CreatedFormatted string
 	}{
 		paste,
-		paste.Created.Format(timeFormat),
+		paste.Created.Format(cfg.TimeFormat),
 	}); err != nil {
 		log.Println("Cannot execute template:", err)
 	}
