@@ -2,18 +2,29 @@
     <head>
         <link rel="stylesheet" href="/static/style.css">
         <script src="/static/index.js"></script>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
     <body>
         <form action="/" method="POST">
-            <input type="text" name="name">
-            <select name="lang">
-                <option value="">Auto</option>
-                {{range .Langs}}
-                    <option value="{{.}}">{{.}}</option>
-                {{end}}
-            </select>
-            <button>Submit</button>
-            <textarea name="code" id="code" cols="30" rows="10"></textarea>
+            <div id="header">
+                <h1>{{.Header}}</h1>
+                <div class="input">
+                    <label for="name">Name:</label>
+                    <input type="text" name="name" placeholder="{{.DefaultName}}">
+                </div>
+                <div class="input">
+                    <label for="lang">Lang:</label>
+                    <select name="lang">
+                        <option value="">Auto</option>
+                        {{range .Langs}}
+                            <option value="{{.}}">{{.}}</option>
+                        {{end}}
+                    </select>
+                </div>
+                
+                <button>Submit</button>
+            </div>
+            <textarea name="code" id="code" placeholder="Type here..."></textarea>
         </form>
     </body>
 </html>

@@ -19,6 +19,7 @@ const (
 	pathLen        = 5
 	highlightStyle = "dracula"
 	undefinedLang  = "Undefined"
+	header         = "Yep Another Pastebin"
 )
 
 var assets packr.Box
@@ -85,9 +86,13 @@ func newPaste(s Server, w http.ResponseWriter, req *http.Request) {
 	}
 
 	t.Execute(w, struct {
-		Langs []string
+		Langs       []string
+		DefaultName string
+		Header      string
 	}{
 		getLanguages(),
+		defaultName,
+		header,
 	})
 }
 

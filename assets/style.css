@@ -1,6 +1,7 @@
 html, body {
-    padding: 0px;
+    padding: 1px;
     margin: 0px;
+    font-family: monospace;
 }
 textarea {
     resize: none;
@@ -9,4 +10,47 @@ textarea {
     height: 100%;
     border: none;
     font-size: 12px;
+    outline: 0px;
+}
+
+/*Dracula Theme*/
+* {
+    background-color: #282a36;
+    color: #f8f8f2;
+}
+
+#header {
+    display: block;
+}
+
+h1 {
+    font-size: 1.5rem;
+    display: inline-block;
+}
+
+input, select, button {
+    font-family: 1.3rem;
+    background-color: #6272a4;
+    border-radius: 3px;
+    border: 0px;
+}
+
+.input {
+    display: inline-block;
+}
+
+@media only screen and (max-width: 800px) {
+    h1 {
+        display: block;
+        width: 100%;
+        text-align: center;
+        font-size: 1.7rem;
+    }
+
+    label {
+        font-size: 1.5rem;
+    }
+    .input {
+        display: block;
+    }
 }
