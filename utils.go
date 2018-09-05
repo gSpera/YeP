@@ -104,13 +104,7 @@ func handlerToRoute(h http.Handler) Route {
 
 func handlePackrFile(filename string) Route {
 	return func(s Server, w http.ResponseWriter, req *http.Request) {
-		var file http.File
-		var err error
-		if _, err := os.Stat(cfg.AssetsDir + filename); err == nil {
-			file, err = os.Open(cfg.AssetsDir + filename)
-		} else {
-			file, err = assets.Open(filename)
-		}
+		file, err := getAsset(filename)
 
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
