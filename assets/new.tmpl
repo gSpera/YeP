@@ -21,7 +21,19 @@
                         {{end}}
                     </select>
                 </div>
-                
+
+                {{if gt .ExpireTimeLen 1}}
+                    <div class="input">
+                        <label for="expire">Expire Time:</label>
+                        <select name="expire">
+                            {{range .ExpireTime}}
+                                <option value="{{.}}">{{.}}</option>
+                            {{end}}
+                        </select>
+                    </div>
+                {{else}}
+                    <span>Expire Time: {{index .ExpireTime 0}}</span>
+                {{end}}
                 <button>Submit</button>
             </div>
             <textarea name="code" id="code" placeholder="Type here..."></textarea>

@@ -20,16 +20,16 @@ Config
 Well, you can add a yep.json file near the executable
 Those are the options with the defaults value:
 
-- Addr:           ":8080" Address to bind
-- TimeFormat:     "2 Jan 2006 15:04:05" Time to display, in the "Golang format"@""
-- DefaultName:    "Anonymous" Name to display if empty name is used
-- PathLen:        5 Lenght of the paste path
-- HighlightStyle: "dracula" Hightlight Style to use, from Chroma styles
-- UndefinedLang:  "Undefined" Lang to display whenever YEP is not capable to auto-detect
-- Header:         "Yep Another Pastebin" String to display somewhere
-- AssetsDir:      "assets/" Where you can insert you assests
-- ExpireAfter:    30 Minute Time after that pastes will be destroyed, time in nanosecond(we want only the best precision for you), Set to 0 for Disable
-- MaxPasteSize:   15KB Max Size of a single Paste
+- Addr:           ":8080": Address to bind
+- TimeFormat:     "2 Jan 2006 15:04:05": Time to display, in the "Golang format"@""
+- DefaultName:    "Anonymous": Name to display if empty name is used
+- PathLen:        5: Lenght of the paste path
+- HighlightStyle: "dracula": Hightlight Style to use, from Chroma styles
+- UndefinedLang:  "Undefined": Lang to display whenever YEP is not capable to auto-detect
+- Header:         "Yep Another Pastebin": String to display somewhere
+- AssetsDir:      "assets/": Where you can insert you assests
+- ExpireAfter:    [30 Minute]: Time after that pastes will be destroyed, time in nanosecond(we want only the best precision for you), the value must be a JSON Array of strings formatted here "Golang"@"https://golang.org/pkg/time/#ParseDuration" (30m = 30 Minutes, 15m10s = 15 Minutes and 10 Seconds, 10ns = 10 Nanosecond)
+- MaxPasteSize:   15KB: Max Size of a single Paste
 
 Customize
 =========

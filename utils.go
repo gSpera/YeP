@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -21,9 +22,15 @@ import (
 
 //Errors declaration for paste
 var (
-	ErrPasteTooBig = fmt.Errorf("Paste too Big")
-	ErrEmptyPaste  = fmt.Errorf("Empty Paste")
+	ErrPasteTooBig        = fmt.Errorf("Paste too Big")
+	ErrEmptyPaste         = fmt.Errorf("Empty Paste")
+	ErrExpireTimeNotValid = fmt.Errorf("Expire time not valid")
+
+	ErrNoConfigFound = fmt.Errorf("No config found")
 )
+
+//PasteNeverExpire is a constant used for indicating a paste that will never expire
+const PasteNeverExpire = "Never"
 
 type config struct {
 	Addr           string
@@ -34,8 +41,39 @@ type config struct {
 	UndefinedLang  string
 	Header         string
 	AssetsDir      string
-	ExpireAfter    time.Duration
+	ExpireAfter    []*pasteDuration
 	MaxPasteSize   int //in bytes
+}
+
+type pasteDuration struct{ time.Duration }
+
+//String implements fmt.Stringer
+func (d *pasteDuration) String() string {
+	m, _ := d.MarshalText()
+	return string(m)
+}
+
+//MarshalText implements encoding.TextMarshaler
+func (d *pasteDuration) MarshalText() ([]byte, error) {
+	if d.Duration == 0 {
+		return []byte(PasteNeverExpire), nil
+	}
+	return []byte(d.Duration.String()), nil
+}
+
+//UnmarshalText implements encoding.TextUnmarshaler
+func (d *pasteDuration) UnmarshalText(text []byte) error {
+	if string(text) == PasteNeverExpire {
+		*d = pasteDuration{0}
+		return nil
+	}
+
+	dur, err := time.ParseDuration(string(text))
+	if err != nil {
+		return err
+	}
+	*d = pasteDuration{dur}
+	return nil
 }
 
 func validateName(name string) (string, error) {
@@ -55,6 +93,27 @@ func validateCode(code string) (string, error) {
 	}
 
 	return code, nil
+}
+
+func validateExpire(expire string) (*pasteDuration, error) {
+	dur := &pasteDuration{}
+	err := dur.UnmarshalText([]byte(expire))
+	if err != nil {
+		return dur, err
+	}
+
+	//Check if the parsed duration is in the config
+	valid := false
+	for _, d := range cfg.ExpireAfter {
+		if dur == d {
+			valid = true
+		}
+	}
+	if !valid {
+		return dur, ErrExpireTimeNotValid
+	}
+
+	return dur, nil
 }
 
 //hightlightCode formattes the code string passed and returns the css, code highlight in HTML and the language
@@ -136,16 +195,25 @@ func handlePackrFile(filename string) Route {
 	}
 }
 
-func readConfig(path string, cfg *config) bool {
+func readConfig(path string, cfg *config) error {
+	if _, err := os.Stat(path); err != nil {
+		return ErrNoConfigFound
+	}
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
-		return false
+		return err
 	}
+
 	err = json.Unmarshal(content, cfg)
 	if err != nil {
-		return false
+		return err
 	}
-	return true
+
+	if len(cfg.ExpireAfter) == 0 {
+		cfg.ExpireAfter = []*pasteDuration{&pasteDuration{0}}
+		return fmt.Errorf("No Expire Time, defaulting to: %s", PasteNeverExpire)
+	}
+	return nil
 }
 
 func handleError(w http.ResponseWriter, req *http.Request, err error) {

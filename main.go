@@ -22,7 +22,7 @@ var cfg = config{
 	UndefinedLang:  "Undefined",
 	Header:         "Yep Another Pastebin",
 	AssetsDir:      "assets/",
-	ExpireAfter:    30 * time.Minute,
+	ExpireAfter:    []*pasteDuration{&pasteDuration{30 * time.Minute}},
 	MaxPasteSize:   15000, //15KB
 }
 
@@ -35,8 +35,12 @@ var assets packr.Box
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
-	if ok := readConfig(configPath, &cfg); ok {
+	if err := readConfig(configPath, &cfg); err == nil {
 		log.Println("Loaded config from:", configPath)
+	} else if err == ErrNoConfigFound {
+		log.Println("Not loading file")
+	} else {
+		log.Println("Error during loading config:", err)
 	}
 
 	log.SetFlags(log.Flags() | log.Lshortfile)
@@ -107,15 +111,23 @@ func newPaste(s Server, w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	t.Execute(w, struct {
-		Langs       []string
-		DefaultName string
-		Header      string
+	err = t.Execute(w, struct {
+		Langs         []string
+		DefaultName   string
+		Header        string
+		ExpireTime    []*pasteDuration
+		ExpireTimeLen int
 	}{
 		getLanguages(),
 		cfg.DefaultName,
 		cfg.Header,
+		cfg.ExpireAfter,
+		len(cfg.ExpireAfter),
 	})
+
+	if err != nil {
+		log.Println("Error in executin template new:", err)
+	}
 }
 
 func postPaste(s Server, w http.ResponseWriter, req *http.Request) {
@@ -127,6 +139,8 @@ func postPaste(s Server, w http.ResponseWriter, req *http.Request) {
 	name := req.PostForm.Get("name")
 	code := req.PostForm.Get("code")
 	lang := req.PostForm.Get("lang")
+	expireTimeS := req.PostForm.Get("expire")
+
 	name, err := validateName(name)
 	if err != nil {
 		handleError(w, req, err)
@@ -137,6 +151,12 @@ func postPaste(s Server, w http.ResponseWriter, req *http.Request) {
 		handleError(w, req, err)
 		return
 	}
+	expireTime, err := validateExpire(expireTimeS)
+	if err != nil {
+		handleError(w, req, err)
+		return
+	}
+
 	css, code, lang := highlightCode(code, lang)
 
 	path := s.db.CreatePastePath(cfg.PathLen)
@@ -159,8 +179,8 @@ func postPaste(s Server, w http.ResponseWriter, req *http.Request) {
 	}
 
 	//If ExpireTime is 0 do not delete pastes
-	if cfg.ExpireAfter != 0 {
-		time.AfterFunc(cfg.ExpireAfter, func() {
+	if expireTime.Duration != 0 {
+		time.AfterFunc(expireTime.Duration, func() {
 			s.db.Delete(paste.Path)
 		})
 	}
