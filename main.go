@@ -23,6 +23,7 @@ var cfg = config{
 	Header:         "Yep Another Pastebin",
 	AssetsDir:      "assets/",
 	ExpireAfter:    30 * time.Minute,
+	MaxPasteSize:   15000, //15KB
 }
 
 const (
@@ -126,8 +127,16 @@ func postPaste(s Server, w http.ResponseWriter, req *http.Request) {
 	name := req.PostForm.Get("name")
 	code := req.PostForm.Get("code")
 	lang := req.PostForm.Get("lang")
-	name = validateName(name)
-	code = validateCode(code)
+	name, err := validateName(name)
+	if err != nil {
+		handleError(w, req, err)
+		return
+	}
+	code, err = validateCode(code)
+	if err != nil {
+		handleError(w, req, err)
+		return
+	}
 	css, code, lang := highlightCode(code, lang)
 
 	path := s.db.CreatePastePath(cfg.PathLen)

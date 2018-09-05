@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -17,6 +17,12 @@ import (
 
 	htmlFormatter "github.com/alecthomas/chroma/formatters/html"
 	"github.com/alecthomas/chroma/lexers"
+)
+
+//Errors declaration for paste
+var (
+	ErrPasteTooBig = fmt.Errorf("Paste too Big")
+	ErrEmptyPaste  = fmt.Errorf("Empty Paste")
 )
 
 type config struct {
@@ -29,17 +35,26 @@ type config struct {
 	Header         string
 	AssetsDir      string
 	ExpireAfter    time.Duration
+	MaxPasteSize   int //in bytes
 }
 
-func validateName(name string) string {
+func validateName(name string) (string, error) {
 	if strings.TrimSpace(name) == "" {
-		return cfg.DefaultName
+		return cfg.DefaultName, nil
 	}
-	return name
+	return name, nil
 }
 
-func validateCode(code string) string {
-	return code
+func validateCode(code string) (string, error) {
+	size := len(strings.TrimSpace(code))
+	if size == 0 {
+		return code, ErrEmptyPaste
+	}
+	if size > cfg.MaxPasteSize {
+		return code, ErrPasteTooBig
+	}
+
+	return code, nil
 }
 
 //hightlightCode formattes the code string passed and returns the css, code highlight in HTML and the language
@@ -131,4 +146,19 @@ func readConfig(path string, cfg *config) bool {
 		return false
 	}
 	return true
+}
+
+func handleError(w http.ResponseWriter, req *http.Request, err error) {
+	w.WriteHeader(http.StatusBadRequest)
+	t, tErr := getTemplate("error")
+
+	//Cannot get template
+	if tErr != nil {
+		log.Printf("Cannot get template while handling error:\nTemplate Error: %v\nError: %v\n", tErr, err)
+		fmt.Fprintf(w, "Error: %v", err)
+		return
+	}
+
+	log.Println(err)
+	t.Execute(w, err)
 }

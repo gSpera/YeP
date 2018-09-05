@@ -29,6 +29,7 @@ Those are the options with the defaults value:
 - Header:         "Yep Another Pastebin" String to display somewhere
 - AssetsDir:      "assets/" Where you can insert you assests
 - ExpireAfter:    30 Minute Time after that pastes will be destroyed, time in nanosecond(we want only the best precision for you), Set to 0 for Disable
+- MaxPasteSize:   15KB Max Size of a single Paste
 
 Customize
 =========
