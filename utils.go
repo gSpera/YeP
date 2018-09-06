@@ -105,8 +105,9 @@ func validateExpire(expire string) (*pasteDuration, error) {
 	//Check if the parsed duration is in the config
 	valid := false
 	for _, d := range cfg.ExpireAfter {
-		if dur == d {
+		if *dur == *d {
 			valid = true
+			break
 		}
 	}
 	if !valid {

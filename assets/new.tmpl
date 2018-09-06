@@ -33,6 +33,7 @@
                     </div>
                 {{else}}
                     <span>Expire Time: {{index .ExpireTime 0}}</span>
+                    <input type="hidden" name="expire" value="{{index .ExpireTime 0}}">
                 {{end}}
                 <button>Submit</button>
             </div>
