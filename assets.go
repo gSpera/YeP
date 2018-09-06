@@ -8,12 +8,12 @@ import (
 	"os"
 )
 
-func getAsset(filename string) (http.File, error) {
+func getAsset(assetsDir, filename string) (http.File, error) {
 	var file http.File
 	var err error
 
-	if _, err := os.Stat(cfg.AssetsDir + filename); err == nil {
-		file, err = os.Open(cfg.AssetsDir + filename)
+	if _, err := os.Stat(assetsDir + filename); err == nil {
+		file, err = os.Open(assetsDir + filename)
 	} else if assets.Has(filename) {
 		file, err = assets.Open(filename)
 	} else {
@@ -24,8 +24,8 @@ func getAsset(filename string) (http.File, error) {
 	return file, err
 }
 
-func getTemplate(name string) (*template.Template, error) {
-	file, err := getAsset(name + ".tmpl")
+func getTemplate(assetsDir, name string) (*template.Template, error) {
+	file, err := getAsset(assetsDir, name+".tmpl")
 	if err != nil {
 		return nil, err
 	}

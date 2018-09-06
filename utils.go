@@ -43,26 +43,26 @@ type config struct {
 	MaxPasteSize   int //in bytes
 }
 
-func validateName(name string) (string, error) {
+func validateName(name, defaultName string) (string, error) {
 	if strings.TrimSpace(name) == "" {
-		return cfg.DefaultName, nil
+		return defaultName, nil
 	}
 	return name, nil
 }
 
-func validateCode(code string) (string, error) {
+func validateCode(code string, maxSize int) (string, error) {
 	size := len(strings.TrimSpace(code))
 	if size == 0 {
 		return code, ErrEmptyPaste
 	}
-	if size > cfg.MaxPasteSize {
+	if size > maxSize {
 		return code, ErrPasteTooBig
 	}
 
 	return code, nil
 }
 
-func validateExpire(expire string) (*pasteDuration, error) {
+func validateExpire(expire string, expireTimes []*pasteDuration) (*pasteDuration, error) {
 	dur := &pasteDuration{}
 	err := dur.UnmarshalText([]byte(expire))
 	if err != nil {
@@ -71,7 +71,7 @@ func validateExpire(expire string) (*pasteDuration, error) {
 
 	//Check if the parsed duration is in the config
 	valid := false
-	for _, d := range cfg.ExpireAfter {
+	for _, d := range expireTimes {
 		if *dur == *d {
 			valid = true
 			break
@@ -85,7 +85,7 @@ func validateExpire(expire string) (*pasteDuration, error) {
 }
 
 //hightlightCode formattes the code string passed and returns the css, code highlight in HTML and the language
-func highlightCode(code string, lang string) (string, string, string) {
+func highlightCode(code, lang string, undefinedLangName, highlightStyle string) (string, string, string) {
 	var lex chroma.Lexer
 	if lang != "" {
 		lex = lexers.Get(lang)
@@ -103,10 +103,10 @@ func highlightCode(code string, lang string) (string, string, string) {
 	lang = lex.Config().Name
 	//If cannot find lang
 	if lex == lexers.Fallback {
-		lang = cfg.UndefinedLang
+		lang = undefinedLangName
 	}
 	lex = chroma.Coalesce(lex)
-	style := styles.Get(cfg.HighlightStyle)
+	style := styles.Get(highlightStyle)
 	if style == nil {
 		style = styles.Fallback
 	}
@@ -146,7 +146,7 @@ func handlerToRoute(h http.Handler) Route {
 
 func handlePackrFile(filename string) Route {
 	return func(s Server, w http.ResponseWriter, req *http.Request) {
-		file, err := getAsset(filename)
+		file, err := getAsset(s.cfg.AssetsDir, filename)
 
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)

@@ -28,7 +28,7 @@ func handleHome(s Server, w http.ResponseWriter, req *http.Request) {
 
 //Handle: / GET
 func handleNewPaste(s Server, w http.ResponseWriter, req *http.Request) {
-	t, err := getTemplate("new")
+	t, err := getTemplate(s.cfg.AssetsDir, "new")
 	if err != nil {
 		log.Println("Cannot get template: new", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -44,10 +44,10 @@ func handleNewPaste(s Server, w http.ResponseWriter, req *http.Request) {
 		ExpireTimeLen int
 	}{
 		getLanguages(),
-		cfg.DefaultName,
-		cfg.Header,
-		cfg.ExpireAfter,
-		len(cfg.ExpireAfter),
+		s.cfg.DefaultName,
+		s.cfg.Header,
+		s.cfg.ExpireAfter,
+		len(s.cfg.ExpireAfter),
 	})
 
 	if err != nil {
@@ -67,25 +67,25 @@ func handlePostPaste(s Server, w http.ResponseWriter, req *http.Request) {
 	lang := req.PostForm.Get("lang")
 	expireTimeS := req.PostForm.Get("expire")
 
-	name, err := validateName(name)
+	name, err := validateName(name, s.cfg.DefaultName)
 	if err != nil {
-		handleError(w, req, err)
+		handleError(w, req, s.cfg.AssetsDir, err)
 		return
 	}
-	code, err = validateCode(code)
+	code, err = validateCode(code, s.cfg.MaxPasteSize)
 	if err != nil {
-		handleError(w, req, err)
+		handleError(w, req, s.cfg.AssetsDir, err)
 		return
 	}
-	expireTime, err := validateExpire(expireTimeS)
+	expireTime, err := validateExpire(expireTimeS, s.cfg.ExpireAfter)
 	if err != nil {
-		handleError(w, req, err)
+		handleError(w, req, s.cfg.AssetsDir, err)
 		return
 	}
 
-	css, code, lang := highlightCode(code, lang)
+	css, code, lang := highlightCode(code, lang, s.cfg.UndefinedLang, s.cfg.HighlightStyle)
 
-	path := s.db.CreatePastePath(cfg.PathLen)
+	path := s.db.CreatePastePath(s.cfg.PathLen)
 	paste := Paste{
 		Path:    path,
 		User:    name,
@@ -95,7 +95,7 @@ func handlePostPaste(s Server, w http.ResponseWriter, req *http.Request) {
 		Created: time.Now(),
 	}
 	if name == "" {
-		name = cfg.DefaultName
+		name = s.cfg.DefaultName
 	}
 	if err := s.db.Store(path, paste); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -116,7 +116,7 @@ func handlePostPaste(s Server, w http.ResponseWriter, req *http.Request) {
 
 //Handle: /PASTE
 func handleGetPaste(s Server, w http.ResponseWriter, req *http.Request) {
-	t, err := getTemplate("paste")
+	t, err := getTemplate(s.cfg.AssetsDir, "paste")
 	if err != nil {
 		log.Println("Cannot get template: paste", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -142,15 +142,15 @@ func handleGetPaste(s Server, w http.ResponseWriter, req *http.Request) {
 		CreatedFormatted string
 	}{
 		paste,
-		paste.Created.Format(cfg.TimeFormat),
+		paste.Created.Format(s.cfg.TimeFormat),
 	}); err != nil {
 		log.Println("Cannot execute template:", err)
 	}
 }
 
-func handleError(w http.ResponseWriter, req *http.Request, err error) {
+func handleError(w http.ResponseWriter, req *http.Request, assetsDir string, err error) {
 	w.WriteHeader(http.StatusBadRequest)
-	t, tErr := getTemplate("error")
+	t, tErr := getTemplate(assetsDir, "error")
 
 	//Cannot get template
 	if tErr != nil {
