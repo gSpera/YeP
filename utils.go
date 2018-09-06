@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/alecthomas/chroma/styles"
 
@@ -43,37 +41,6 @@ type config struct {
 	AssetsDir      string
 	ExpireAfter    []*pasteDuration
 	MaxPasteSize   int //in bytes
-}
-
-type pasteDuration struct{ time.Duration }
-
-//String implements fmt.Stringer
-func (d *pasteDuration) String() string {
-	m, _ := d.MarshalText()
-	return string(m)
-}
-
-//MarshalText implements encoding.TextMarshaler
-func (d *pasteDuration) MarshalText() ([]byte, error) {
-	if d.Duration == 0 {
-		return []byte(PasteNeverExpire), nil
-	}
-	return []byte(d.Duration.String()), nil
-}
-
-//UnmarshalText implements encoding.TextUnmarshaler
-func (d *pasteDuration) UnmarshalText(text []byte) error {
-	if string(text) == PasteNeverExpire {
-		*d = pasteDuration{0}
-		return nil
-	}
-
-	dur, err := time.ParseDuration(string(text))
-	if err != nil {
-		return err
-	}
-	*d = pasteDuration{dur}
-	return nil
 }
 
 func validateName(name string) (string, error) {
@@ -215,19 +182,4 @@ func readConfig(path string, cfg *config) error {
 		return fmt.Errorf("No Expire Time, defaulting to: %s", PasteNeverExpire)
 	}
 	return nil
-}
-
-func handleError(w http.ResponseWriter, req *http.Request, err error) {
-	w.WriteHeader(http.StatusBadRequest)
-	t, tErr := getTemplate("error")
-
-	//Cannot get template
-	if tErr != nil {
-		log.Printf("Cannot get template while handling error:\nTemplate Error: %v\nError: %v\n", tErr, err)
-		fmt.Fprintf(w, "Error: %v", err)
-		return
-	}
-
-	log.Println(err)
-	t.Execute(w, err)
 }
