@@ -9,7 +9,15 @@ import (
 )
 
 //Handle: /
+//Transfer to: /PASTE
+//Transfer to: / GET
+//Transfer to: / POST
 func handleHome(s Server, w http.ResponseWriter, req *http.Request) {
+	if req.URL.Path != "/" {
+		handleGetPaste(s, w, req)
+		return
+	}
+
 	if req.Method == "POST" {
 		handlePostPaste(s, w, req)
 		return

@@ -183,3 +183,9 @@ func readConfig(path string, cfg *config) error {
 	}
 	return nil
 }
+
+func routeToHandler(r Route, s *Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, req *http.Request) {
+		r(*s, w, req)
+	}
+}

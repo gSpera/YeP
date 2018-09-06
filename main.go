@@ -46,17 +46,16 @@ func main() {
 
 	srv := NewServer(
 		&MemoryDB{},
-		map[string]Route{
-			"/": handleHome,
-		},
 	)
+
+	srv.handleRoute("/", handleHome)
 
 	for _, filename := range assets.List() {
 		//Do not return templates
 		if strings.HasSuffix(filename, ".tmpl") {
 			continue
 		}
-		srv.routes["/static/"+filename] = handlePackrFile(filename)
+		srv.mux.HandleFunc("/static/"+filename, routeToHandler(handlePackrFile(filename), &srv))
 	}
 
 	log.Println("Listening on", cfg.Addr)
@@ -66,31 +65,26 @@ func main() {
 //Server is a YeP server
 //Implements http.Handler
 type Server struct {
-	db     Database
-	routes map[string]Route
-	mux    *http.ServeMux
+	db  Database
+	mux *http.ServeMux
 }
 
 //NewServer creates a new server
-func NewServer(db Database, routes map[string]Route) Server {
+func NewServer(db Database) Server {
 	s := Server{
-		db:     db,
-		routes: routes,
-		mux:    http.NewServeMux(),
+		db:  db,
+		mux: http.NewServeMux(),
 	}
 	return s
+}
+
+func (s *Server) handleRoute(pattern string, r Route) {
+	s.mux.HandleFunc(pattern, routeToHandler(r, s))
 }
 
 //Route is a Server Route
 type Route func(s Server, w http.ResponseWriter, req *http.Request)
 
 func (s Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	rout, ok := s.routes[req.URL.Path]
-	if ok {
-		rout(s, w, req)
-		return
-	}
-
 	s.mux.ServeHTTP(w, req)
-	// handleGetPaste(s, w, req)
 }
