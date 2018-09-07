@@ -2,10 +2,8 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
-	"time"
 )
 
 //Handle: /
@@ -67,48 +65,16 @@ func handlePostPaste(s Server, w http.ResponseWriter, req *http.Request) {
 	lang := req.PostForm.Get("lang")
 	expireTimeS := req.PostForm.Get("expire")
 
-	name, err := validateName(name, s.cfg.DefaultName)
-	if err != nil {
-		handleError(w, req, s.cfg.AssetsDir, err)
-		return
-	}
-	code, err = validateCode(code, s.cfg.MaxPasteSize)
-	if err != nil {
-		handleError(w, req, s.cfg.AssetsDir, err)
-		return
-	}
 	expireTime, err := validateExpire(expireTimeS, s.cfg.ExpireAfter)
 	if err != nil {
 		handleError(w, req, s.cfg.AssetsDir, err)
 		return
 	}
 
-	css, code, lang := highlightCode(code, lang, s.cfg.UndefinedLang, s.cfg.HighlightStyle)
-
-	path := s.db.CreatePastePath(s.cfg.PathLen)
-	paste := Paste{
-		Path:    path,
-		User:    name,
-		Lang:    lang,
-		Style:   template.CSS(css),
-		Content: template.HTML(code),
-		Created: time.Now(),
-	}
-	if name == "" {
-		name = s.cfg.DefaultName
-	}
-	if err := s.db.Store(path, paste); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Could not post paste")
-		log.Println("Could not paste paste", err)
+	path, err := NewPaste(&s, name, code, lang, expireTime)
+	if err != nil {
+		handleError(w, req, s.cfg.AssetsDir, err)
 		return
-	}
-
-	//If ExpireTime is 0 do not delete pastes
-	if expireTime.Duration != 0 {
-		time.AfterFunc(expireTime.Duration, func() {
-			s.db.Delete(paste.Path)
-		})
 	}
 
 	http.Redirect(w, req, path, http.StatusFound)
