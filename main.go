@@ -49,6 +49,7 @@ func main() {
 	srv := NewServer(&MemoryDB{}, cfg)
 
 	srv.handleRoute("/", handleHome)
+	srv.handleRoute("/api/new", handleAPINewPaste)
 
 	for _, filename := range assets.List() {
 		//Do not return templates
