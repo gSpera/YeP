@@ -13,6 +13,7 @@ type Paste struct {
 	Path    string
 	User    string
 	Lang    string
+	Source  string
 	Style   template.CSS
 	Content template.HTML
 	Created time.Time
@@ -48,24 +49,25 @@ func (d *pasteDuration) UnmarshalText(text []byte) error {
 }
 
 //NewPaste creates a new paste
-func NewPaste(s *Server, name, code, lang string, expireTime *pasteDuration) (string, error) {
+func NewPaste(s *Server, name, source, lang string, expireTime *pasteDuration) (string, error) {
 
 	name, err := validateName(name, s.cfg.DefaultName)
 	if err != nil {
 		return "", err
 	}
-	code, err = validateCode(code, s.cfg.MaxPasteSize)
+	source, err = validateCode(source, s.cfg.MaxPasteSize)
 	if err != nil {
 		return "", err
 	}
 
-	css, code, lang := highlightCode(code, lang, s.cfg.UndefinedLang, s.cfg.HighlightStyle)
+	css, code, lang := highlightCode(source, lang, s.cfg.UndefinedLang, s.cfg.HighlightStyle)
 
 	path := s.db.CreatePastePath(s.cfg.PathLen)
 	paste := Paste{
 		Path:    path,
 		User:    name,
 		Lang:    lang,
+		Source:  source,
 		Style:   template.CSS(css),
 		Content: template.HTML(code),
 		Created: time.Now(),
