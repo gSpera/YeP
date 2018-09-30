@@ -8,6 +8,13 @@ import (
 	"net/http"
 )
 
+//Error strings for the APIs
+const (
+	ErrInternalServerError = "Internal Server Error"
+	ErrMethodNotAllowed    = "Method not allowed"
+	ErrCannotDecodeJSON    = "Invalid JSON"
+)
+
 type newPasteRequest struct {
 	Name       string
 	Code       string
@@ -16,8 +23,9 @@ type newPasteRequest struct {
 }
 
 type newPasteResponse struct {
-	OK   bool
-	Path string
+	OK    bool
+	Error string
+	Path  string
 }
 
 type getPasteRequest struct {
@@ -27,6 +35,7 @@ type getPasteRequest struct {
 
 type getPasteResponse struct {
 	OK      bool
+	Error   string
 	Name    string
 	Code    string
 	Render  string
@@ -37,48 +46,74 @@ type getPasteResponse struct {
 }
 
 func handleAPINewPaste(s Server, w http.ResponseWriter, req *http.Request) {
+	res := newPasteResponse{}
+	var path string
+	var err error
+	var body []byte
+	paste := newPasteRequest{}
+	duration := &pasteDuration{}
+
 	if req.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
+		res = newPasteResponse{
+			OK:    false,
+			Error: ErrMethodNotAllowed,
+		}
+		goto response
 	}
-	body, err := ioutil.ReadAll(req.Body)
+
+	body, err = ioutil.ReadAll(req.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("Cannot read body:", err)
+		res = newPasteResponse{
+			OK:    false,
+			Error: ErrInternalServerError,
+		}
+		goto response
 	}
 
-	paste := newPasteRequest{}
 	if err := json.Unmarshal(body, &paste); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(w, "Cannot read JSON")
-		return
+		res = newPasteResponse{
+			OK:    false,
+			Error: ErrCannotDecodeJSON,
+		}
+		goto response
 	}
 
-	duration := &pasteDuration{}
 	if err := duration.UnmarshalText([]byte(paste.ExpireTime)); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(w, "Cannot parse ExpireTime")
-		return
+		res = newPasteResponse{
+			OK:    false,
+			Error: ErrExpireTimeNotValid.Error(),
+		}
+		goto response
 	}
-	path, err := NewPaste(&s, paste.Name, paste.Code, paste.Lang, duration)
+	path, err = NewPaste(&s, paste.Name, paste.Code, paste.Lang, duration)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintln(w, "Cannot create paste")
 		log.Println("Cannot create paste:", err)
-		return
+		res = newPasteResponse{
+			OK:    false,
+			Error: ErrInternalServerError,
+		}
+		goto response
 	}
 
-	res, err := json.Marshal(newPasteResponse{
+	res = newPasteResponse{
 		OK:   true,
 		Path: path,
-	})
+	}
+
+response:
+	response, err := json.Marshal(res)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintln(w, "Cannot create response")
 		log.Println("Cannot marshal newPasteResponse:", err)
 		return
 	}
-	if _, err := w.Write(res); err != nil {
+	if _, err := w.Write(response); err != nil {
 		log.Println("Cannot write response:", err)
 		return
 	}
