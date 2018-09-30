@@ -14,6 +14,7 @@ type Paste struct {
 	User    string
 	Lang    string
 	Source  string
+	Expire  time.Time
 	Style   template.CSS
 	Content template.HTML
 	Created time.Time
@@ -71,6 +72,7 @@ func NewPaste(s *Server, name, source, lang string, expireTime *pasteDuration) (
 		Style:   template.CSS(css),
 		Content: template.HTML(code),
 		Created: time.Now(),
+		Expire:  time.Now().Add(expireTime.Duration),
 	}
 	if name == "" {
 		name = s.cfg.DefaultName
