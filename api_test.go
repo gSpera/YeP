@@ -11,10 +11,6 @@ import (
 	"testing"
 )
 
-//Main setups the server for future tests
-func TestMain(m *testing.M) {
-	os.Exit(m.Run())
-}
 func TestNewPaste(t *testing.T) {
 	tm := []struct {
 		name       string
@@ -76,13 +72,14 @@ func TestNewPaste(t *testing.T) {
 		},
 	}
 
+	server := NewServer(MemoryDB{}, defaultCfg)
+
 	for _, tt := range tm {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.disableLog {
 				log.SetOutput(ioutil.Discard)
 				defer log.SetOutput(os.Stderr)
 			}
-			server := NewServer(MemoryDB{}, defaultCfg)
 			res := httptest.NewRecorder()
 
 			inputBytes, err := json.Marshal(tt.input)
@@ -113,19 +110,162 @@ func TestNewPaste(t *testing.T) {
 			}
 
 			if tt.deepCheck && (output != tt.output) {
-				t.Fatalf("Outputs are different: expected: %v; got: %v", tt.output, output)
+				t.Fatalf("Outputs are different: expected: %+v; got: %+v", tt.output, output)
 			}
 		})
 	}
-}
 
-func getExpireTime(t *testing.T) string {
-	if len(defaultCfg.ExpireAfter) == 0 {
-		return "0"
+	log.SetOutput(ioutil.Discard)
+	defer log.SetOutput(os.Stderr)
+
+	t.Run("Bad Writer", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/api/new", new(bytes.Buffer))
+		handleAPINewPaste(server, badWriter{}, req)
+	})
+
+	t.Run("Bad Reader", func(t *testing.T) {
+		req := httptest.NewRequest("POST", "/api/new", badReader{})
+		writer := httptest.NewRecorder()
+		handleAPINewPaste(server, writer, req)
+
+		if writer.Code == http.StatusOK {
+			t.Error("Request accepted")
+		}
+	})
+}
+func TestGetPaste(t *testing.T) {
+	tm := []struct {
+		name      string
+		code      int
+		deepCheck bool
+		input     getPasteRequest
+		output    getPasteResponse
+	}{
+		{
+			"Simple",
+			http.StatusOK,
+			true,
+			getPasteRequest{
+				Name:   "test",
+				Render: false,
+			},
+			getPasteResponse{
+				OK:      true,
+				Error:   "",
+				Name:    "test",
+				Code:    "test",
+				User:    "test",
+				Created: 0,
+				Expire:  0,
+			},
+		},
+		{
+			"Render",
+			http.StatusOK,
+			true,
+			getPasteRequest{
+				Name:   "test",
+				Render: true,
+			},
+			getPasteResponse{
+				OK:      true,
+				Error:   "",
+				Name:    "test",
+				Code:    "test",
+				User:    "test",
+				Created: 0,
+				Expire:  0,
+				Render:  "<h1>test</h1>",
+				Style:   "",
+			},
+		},
+		{
+			"Not Found",
+			http.StatusNotFound,
+			true,
+			getPasteRequest{
+				Name:   "notfound",
+				Render: false,
+			},
+			getPasteResponse{
+				OK:    false,
+				Error: "Paste not found",
+			},
+		},
 	}
-	res, err := defaultCfg.ExpireAfter[0].MarshalText()
-	if err != nil {
-		t.Fatalf("Could not get ExpireTime: %v", err)
+
+	server := NewServer(NewTestDB(), defaultCfg)
+
+	for _, tt := range tm {
+		t.Run(tt.name, func(t *testing.T) {
+			res := httptest.NewRecorder()
+
+			inputBytes, _ := json.Marshal(tt.input)
+			input := bytes.NewReader(inputBytes)
+
+			req := httptest.NewRequest("GET", "/api/get", input)
+
+			handleAPIGetPaste(server, res, req)
+
+			if res.Code != tt.code {
+				t.Errorf("Wrong code: expected: %d; got: %d", tt.code, res.Code)
+			}
+			body, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("Could not read body: %v", err)
+			}
+
+			output := getPasteResponse{}
+			if err := json.Unmarshal(body, &output); err != nil {
+				t.Fatalf("Could not decode output: %v", err)
+			}
+
+			if tt.output.OK != output.OK {
+				t.Errorf("Expected: %v; got: %v, error: %v", tt.output.OK, output.OK, output.Error)
+			}
+
+			if tt.deepCheck && (output != tt.output) {
+				t.Fatalf("Outputs are different: expected: %+v; got: %+v", tt.output, output)
+			}
+		})
 	}
-	return string(res)
+
+	t.Run("Method not allowed", func(t *testing.T) {
+		res := httptest.NewRecorder()
+
+		inputBytes, _ := json.Marshal([]byte("{}"))
+		input := bytes.NewReader(inputBytes)
+
+		req := httptest.NewRequest("POST", "/api/get", input)
+
+		handleAPIGetPaste(server, res, req)
+		if res.Code == http.StatusOK {
+			t.Error("Request accepted")
+		}
+	})
+
+	log.SetOutput(ioutil.Discard)
+	defer log.SetOutput(os.Stderr)
+
+	t.Run("Bad Writer", func(t *testing.T) {
+
+		inputBytes, _ := json.Marshal([]byte("{}"))
+		input := bytes.NewReader(inputBytes)
+
+		req := httptest.NewRequest("GET", "/api/get", input)
+
+		handleAPIGetPaste(server, badWriter{}, req)
+	})
+
+	t.Run("Bad Reader", func(t *testing.T) {
+		res := httptest.NewRecorder()
+
+		req := httptest.NewRequest("GET", "/api/get", badReader{})
+
+		handleAPIGetPaste(server, res, req)
+
+		if res.Code == http.StatusOK {
+			t.Error("Request accepted")
+		}
+	})
 }
