@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -13,6 +12,7 @@ const (
 	ErrInternalServerError = "Internal Server Error"
 	ErrMethodNotAllowed    = "Method not allowed"
 	ErrCannotDecodeJSON    = "Invalid JSON"
+	ErrPasteNotFound       = "Paste not found"
 )
 
 type newPasteRequest struct {
@@ -106,13 +106,8 @@ func handleAPINewPaste(s Server, w http.ResponseWriter, req *http.Request) {
 	}
 
 response:
-	response, err := json.Marshal(res)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintln(w, "Cannot create response")
-		log.Println("Cannot marshal newPasteResponse:", err)
-		return
-	}
+	response, _ := json.Marshal(res)
+
 	if _, err := w.Write(response); err != nil {
 		log.Println("Cannot write response:", err)
 		return
@@ -120,37 +115,55 @@ response:
 }
 
 func handleAPIGetPaste(s Server, w http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodPost {
+	var request getPasteRequest
+	var res getPasteResponse
+	var body []byte
+	var paste Paste
+	var err error
+	var style, render string
+
+	if req.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
+		res = getPasteResponse{
+			OK:    false,
+			Error: ErrMethodNotAllowed,
+		}
+		goto response
 	}
-	body, err := ioutil.ReadAll(req.Body)
+
+	body, err = ioutil.ReadAll(req.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Println("Cannot read body:", err)
+		goto response
 	}
 
-	request := getPasteRequest{}
+	request = getPasteRequest{}
 	if err := json.Unmarshal(body, &request); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(w, "Cannot read JSON")
-		return
+		res = getPasteResponse{
+			OK:    false,
+			Error: ErrCannotDecodeJSON,
+		}
+		goto response
 	}
 
-	paste, err := s.db.Get(request.Name)
+	paste, err = s.db.Get(request.Name)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		fmt.Fprintln(w, "Paste not found")
-		return
+		res = getPasteResponse{
+			OK:    false,
+			Error: ErrPasteNotFound,
+		}
+		goto response
 	}
-	render := ""
-	style := ""
+
 	if request.Render {
 		render = string(paste.Content)
 		style = string(paste.Style)
 	}
 
-	res, err := json.Marshal(getPasteResponse{
+	res = getPasteResponse{
 		OK:      true,
 		Name:    request.Name,
 		Code:    paste.Source,
@@ -159,15 +172,12 @@ func handleAPIGetPaste(s Server, w http.ResponseWriter, req *http.Request) {
 		Created: paste.Created.Unix(),
 		User:    paste.User,
 		Expire:  paste.Expire.UnixNano(),
-	})
-
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintln(w, "Cannot create response")
-		log.Println("Cannot marshal newPasteResponse:", err)
-		return
 	}
-	if _, err := w.Write(res); err != nil {
+
+response:
+	result, _ := json.Marshal(res)
+
+	if _, err := w.Write(result); err != nil {
 		log.Println("Cannot write response:", err)
 		return
 	}
